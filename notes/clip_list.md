@@ -81,5 +81,6 @@ Ranked best → worst.
   - 03: 0:14.2–0:17.7 ("And from there… around five years"), vlog 9:55 + 17:30
   - In the B-roll shots he's talking to the camera, so his lips don't match the voice-over (normal for cutaways).
 - **Captions (v4, "podcast" style, picked from `notes/caption_styles.jpg`):** clean lowercase Montserrat Bold with a soft shadow; one keyword per phrase swaps to a large Playfair Display italic serif; words appear as they're spoken (layout fixed, no shifting). Phrases = the hand-written `caption_lines`; keywords per clip in the spec (`keywords`). Drawn per frame by `scripts/captions.py` (styles `boxed`, `single`, `podcast`, `native` available via `caption_style`).
+- **TikTok/Reels safe area:** all captions stay inside x 140–940 px (clear of the right-side like/comment/share buttons) and above y 1440 (clear of the username/description). Wide phrases shrink to fit (≥ 80 %), otherwise wrap to two lines. Verified on every phrase: text spans x 141–935, lowest point y 1392.
 - Zoomed shots are upscaled up to ~2.3× from the 1080p source, slightly softer than the wide shots but fine on a phone.
 - Other TJR videos as B-roll: YouTube blocks downloads from this server; upload them to Drive (like the first source) to use them.

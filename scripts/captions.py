@@ -21,6 +21,11 @@ from PIL import Image, ImageDraw, ImageFilter, ImageFont
 
 FONTS = Path(__file__).resolve().parent.parent / "fonts"
 W, H = 1080, 1920
+# TikTok/Reels safe area: the right ~140 px hold the like/comment/share buttons
+# and the bottom ~25 % the username/description, so captions stay inside a
+# centred SAFE_W box (140 px margin each side) and above y = 0.75 H.
+SAFE_W = 800
+MIN_FIT = 0.8   # shrink down to 80 %, beyond that wrap onto two lines
 _cache = {}
 
 
@@ -78,6 +83,10 @@ def draw(img, words, active, style, age=1.0, keywords=()):
         f = font("Poppins-ExtraBold.ttf", int(78 * s))
         parts = [(w.upper(), f) for w in words]
         tw, xs, ws = _layout(parts, int(20 * s))
+        if tw > SAFE_W:
+            f = font("Poppins-ExtraBold.ttf", int(78 * s * SAFE_W / tw))
+            parts = [(w.upper(), f) for w in words]
+            tw, xs, ws = _layout(parts, int(20 * s * SAFE_W / tw))
         x0 = (W - tw) // 2
         asc = f.getbbox("H")
         d = ImageDraw.Draw(img)
@@ -91,6 +100,8 @@ def draw(img, words, active, style, age=1.0, keywords=()):
     if style == "single":
         t = words[active].upper()
         f = font("Anton-Regular.ttf", int(150 * s))
+        if f.getbbox(t)[2] - f.getbbox(t)[0] > SAFE_W:
+            f = font("Anton-Regular.ttf", int(150 * s * SAFE_W / (f.getbbox(t)[2] - f.getbbox(t)[0])))
         col = YELLOW if bare(t) in kw else (255, 255, 255)
         bb = f.getbbox(t)
         x = (W - (bb[2] - bb[0])) // 2 - bb[0]
@@ -100,22 +111,35 @@ def draw(img, words, active, style, age=1.0, keywords=()):
         return img
 
     if style == "podcast":
-        def build(k):
+        def build(ws, k):
             parts = []
-            for w in words:
+            for w in ws:
                 t = w.lower().strip(",.")
                 if bare(w) in kw:
                     parts.append((t, font("PlayfairDisplay-Italic[wght].ttf", int(96 * k), 600)))
                 else:
                     parts.append((t, font("Montserrat[wght].ttf", int(64 * k), 700)))
             return parts, _layout(parts, int(18 * k))
-        parts, (tw, xs, ws) = build(s)
-        if tw > 960:  # auto-fit long phrases
-            parts, (tw, xs, ws) = build(s * 960 / tw)
-        x0 = (W - tw) // 2
-        pos = [(x0 + x, cy + 70) for x in xs]  # shared baseline
 
-        shown = list(zip(parts, pos))[:active + 1]  # words appear as they're spoken
+        def fit(ws):
+            parts, (tw, xs, _) = build(ws, s)
+            if tw > SAFE_W:
+                parts, (tw, xs, _) = build(ws, s * SAFE_W / tw)
+            return parts, tw, xs
+
+        _, (tw, _, _) = build(words, s)
+        if tw <= SAFE_W / MIN_FIT or len(words) < 2:
+            rows = [(words, 0)]
+        else:  # two balanced lines
+            cut = min(range(1, len(words)),
+                      key=lambda k: abs(build(words[:k], s)[1][0] - build(words[k:], s)[1][0]))
+            rows = [(words[:cut], 0), (words[cut:], cut)]
+        laid = []
+        for r, (ws, first) in enumerate(rows):
+            parts, tw, xs = fit(ws)
+            base = cy + 70 + (r - (len(rows) - 1)) * int(88 * s)
+            laid += [(parts[k], ((W - tw) // 2 + xs[k], base), first + k) for k in range(len(ws))]
+        shown = [(pt, ps) for pt, ps, idx in laid if idx <= active]  # appear as spoken
 
         def txt(d, v):
             for (t, f_), (x, y) in shown:
@@ -127,6 +151,8 @@ def draw(img, words, active, style, age=1.0, keywords=()):
     if style == "native":
         f = font("Poppins-Bold.ttf", int(60 * s))
         t = " ".join(words)
+        if f.getbbox(t)[2] - f.getbbox(t)[0] > SAFE_W - 56:
+            f = font("Poppins-Bold.ttf", int(60 * s * (SAFE_W - 56) / (f.getbbox(t)[2] - f.getbbox(t)[0])))
         bb = f.getbbox(t)
         tw, th = bb[2] - bb[0], bb[3] - bb[1]
         x = (W - tw) // 2
