@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
 """Vertical "edited" version of a clip: punch-in zooms, B-roll cutaways,
-captions with emphasis words.
+captions drawn per frame (scripts/captions.py; spec "caption_style", default
+"podcast", and "keywords" shown in the accent font).
 
 Takes the horizontal clip made by render.py (spec["out"]) as the A-roll, so
 cuts, audio and crossfades are identical; this only re-frames the picture.
@@ -18,13 +19,15 @@ Spec additions (all optional):
 Usage: python3 scripts/edit.py notes/specs/tjr_01.json [--uncensored]
 Output: clips/edited/<name>_edit.mp4 (1080x1920)
 """
-import argparse, json, subprocess, sys, tempfile
+import argparse, json, subprocess, sys
 from pathlib import Path
 
 import cv2
 import numpy as np
+from PIL import Image
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
+import captions  # noqa: E402
 import render  # noqa: E402
 
 ROOT = render.ROOT
@@ -32,7 +35,6 @@ OW, OH = 1080, 1920
 FACE_AT = 0.40          # face height in the frame (fraction from top) when zoomed
 OVERSHOOT, SETTLE = 0.05, 0.18
 DRIFT = 0.010           # slow push per second while a zoom level is held
-ACCENT = "&H4DE1FF&"    # emphasis colour (BGR) = #FFE14D
 
 
 def probe(path):
@@ -119,11 +121,8 @@ def frame_crop(img, cx, cy, z):
     return cv2.warpAffine(img, m, (OW, OH), flags=cv2.INTER_CUBIC, borderMode=cv2.BORDER_REPLICATE)
 
 
-CHUNK_CHARS = 17        # max characters per caption chunk (uppercase, 76 px)
-
-
-def chunks_of(lines):
-    """Chunk the whole clip's words (DP): chunks of <= 3 words (4 if short) / CHUNK_CHARS,
+def chunks_of(lines, max_words, max_chars):
+    """Chunk the whole clip's words (DP): chunks of <= max_words / max_chars,
     never across a sentence end or a cut, preferring caption-line boundaries,
     avoiding lone short words and uneven sizes."""
     words, line_end, hard = [], [], []
@@ -135,23 +134,23 @@ def chunks_of(lines):
     for i in range(len(words) - 1):  # a cut right after word i is a hard break
         if words[i + 1].get("cut"):
             hard[i] = True
-    n = len(words)
+    n, target = len(words), max_chars * 0.65
 
     def cost(i, j):  # chunk = words[i:j]
         ws = words[i:j]
         ln = len(" ".join(w["w"] for w in ws))
-        if len(ws) > (4 if ln <= 15 else 3) or (ln > CHUNK_CHARS and len(ws) > 1) or any(hard[i:j - 1]):
+        if len(ws) > max_words or (ln > max_chars and len(ws) > 1) or any(hard[i:j - 1]):
             return None
-        c = (ln - 11) ** 2 * 0.3
-        if len(ws) == 1 and len(ws[0]["w"]) <= 5:
+        c = (ln - target) ** 2 * 0.3
+        if len(ws) == 1 and len(ws[0]["w"]) <= 5 and max_words > 1:
             c += 60
         if j < n and not line_end[j - 1]:
-            c += 25
+            c += 40
         return c
 
     best = [(0, [])] + [None] * n
     for j in range(1, n + 1):
-        for i in range(max(0, j - 4), j):
+        for i in range(max(0, j - max_words), j):
             c = cost(i, j)
             if c is not None and best[i] is not None:
                 cand = (best[i][0] + c, best[i][1] + [(i, j)])
@@ -160,9 +159,8 @@ def chunks_of(lines):
     return [words[i:j] for i, j in best[n][1]]
 
 
-def captions(spec, ass_path, uncensored):
-    """Bold short-form captions: 2-3 words at a time, uppercase, black outline;
-    the word being spoken turns yellow and grows slightly; each chunk pops in."""
+def caption_track(spec, style, uncensored):
+    """Chunks with timing: [{"start", "end", "words": [...], "starts": [...]}]."""
     segs = spec["segments"]
     cache = {}
     for s in segs:
@@ -172,36 +170,14 @@ def captions(spec, ass_path, uncensored):
     words, total = render.caption_words(segs, cache, uncensored)
     lines = (render.manual_lines(words, spec["caption_lines"], uncensored)
              if spec.get("caption_lines") else render.caption_lines(words))
-    clean = lambda t: render.re.sub(r"[,.;:]+$", "", t).upper()
-    chunks = chunks_of(lines)
-    ev = []
+    st = captions.STYLES[style]
+    chunks = chunks_of(lines, st["chunk"], st["chars"])
+    track = []
     for ci, ch in enumerate(chunks):
-        c_start = ch[0]["s"]
         nxt = chunks[ci + 1][0]["s"] if ci + 1 < len(chunks) else total
-        c_end = min(nxt, ch[-1]["e"] + 0.35)
-        for k, w in enumerate(ch):
-            st = c_start if k == 0 else w["s"]
-            en = ch[k + 1]["s"] if k + 1 < len(ch) else c_end
-            if en - st < 0.02:
-                continue
-            toks = [f"{{\\c{ACCENT}\\fscx106\\fscy106}}{clean(x['w'])}{{\\c&HFFFFFF&\\fscx100\\fscy100}}"
-                    if j == k else clean(x["w"]) for j, x in enumerate(ch)]
-            pop = "{\\fscx82\\fscy82\\t(0,110,\\fscx100\\fscy100)}" if k == 0 else ""
-            ev.append(f"Dialogue: 0,{render.ass_time(st)},{render.ass_time(en)},Cap,,0,0,0,,{pop}{' '.join(toks)}")
-    ass_path.write_text(f"""[Script Info]
-ScriptType: v4.00+
-PlayResX: {OW}
-PlayResY: {OH}
-WrapStyle: 2
-ScaledBorderAndShadow: yes
-
-[V4+ Styles]
-Format: Name, Fontname, Fontsize, PrimaryColour, SecondaryColour, OutlineColour, BackColour, Bold, Italic, Underline, StrikeOut, ScaleX, ScaleY, Spacing, Angle, BorderStyle, Outline, Shadow, Alignment, MarginL, MarginR, MarginV, Encoding
-Style: Cap,Inter Black,76,&H00FFFFFF,&H00FFFFFF,&H00000000,&H90000000,0,0,0,0,100,100,2,0,1,5.5,4,2,40,40,{round(OH * 0.33)},1
-
-[Events]
-Format: Layer, Start, End, Style, Name, MarginL, MarginR, MarginV, Effect, Text
-""" + "\n".join(ev) + "\n")
+        track.append({"start": ch[0]["s"], "end": min(nxt, ch[-1]["e"] + 0.35),
+                      "words": [w["w"] for w in ch], "starts": [w["s"] for w in ch]})
+    return track
 
 
 def main():
@@ -217,16 +193,25 @@ def main():
     print("tracking face…", flush=True)
     fxs, fys = face_track(base, w, h, fps, spec.get("center_x", w / 2) * w / 1920)
 
-    tmp = Path(tempfile.mkdtemp())
-    ass = tmp / "captions.ass"
-    captions(spec, ass, a.uncensored)
+    style = spec.get("caption_style", "podcast")
+    track = caption_track(spec, style, a.uncensored)
+    keywords = spec.get("keywords", [])
+
+    def caption(img, t):
+        ch = next((c for c in track if c["start"] <= t < c["end"]), None)
+        if not ch:
+            return img
+        active = max(k for k, s0 in enumerate(ch["starts"]) if s0 <= t or k == 0)
+        pil = Image.fromarray(cv2.cvtColor(img, cv2.COLOR_BGR2RGB))
+        pil = captions.draw(pil, ch["words"], active, style, t - ch["start"], keywords)
+        return cv2.cvtColor(np.asarray(pil), cv2.COLOR_RGB2BGR)
 
     out = ROOT / "clips" / "edited" / f"{Path(spec['out']).stem}_edit.mp4"
     out.parent.mkdir(parents=True, exist_ok=True)
     enc = subprocess.Popen(
         ["ffmpeg", "-y", "-v", "error", "-f", "rawvideo", "-pix_fmt", "bgr24", "-s", f"{OW}x{OH}",
-         "-r", f"{fps:.6f}", "-i", "-", "-i", str(base), "-filter_complex", f"[0:v]ass={ass}[v]",
-         "-map", "[v]", "-map", "1:a", "-c:v", "libx264", "-preset", "slow", "-crf", "18",
+         "-r", f"{fps:.6f}", "-i", "-", "-i", str(base),
+         "-map", "0:v", "-map", "1:a", "-c:v", "libx264", "-preset", "slow", "-crf", "18",
          "-pix_fmt", "yuv420p", "-c:a", "copy", "-movflags", "+faststart", str(out)],
         stdin=subprocess.PIPE)
 
@@ -248,10 +233,10 @@ def main():
                 z = active.get("z", 1.0) + (active.get("z2", 1.08) - active.get("z", 1.0)) * u
                 bh_ = bf.shape[0]
                 img = frame_crop(bf, active.get("cx", bf.shape[1] / 2), active.get("cy", bh_ * 0.4), z)
-                enc.stdin.write(img.tobytes())
+                enc.stdin.write(caption(img, t).tobytes())
                 continue
         img = frame_crop(fr, fxs[min(i, len(fxs) - 1)], fys[min(i, len(fys) - 1)], zoom_at(t, keys))
-        enc.stdin.write(img.tobytes())
+        enc.stdin.write(caption(img, t).tobytes())
     enc.stdin.close()
     enc.wait()
     print(f"{out.relative_to(ROOT)}", flush=True)
