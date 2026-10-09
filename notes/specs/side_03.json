@@ -1,0 +1,30 @@
+{
+ "video": "side/side_03.mp4",
+ "transcript": "transcripts/side_03.json",
+ "out": "side/side_03_captioned.mp4",
+ "style": "podcast",
+ "y": 0.47,
+ "safe_w": 680,
+ "caption_lines": [
+  "You make a *plan*",
+  "when you're feeling *motivated*.",
+  "Wake up *early*,",
+  "work out,",
+  "get *everything* done.",
+  "Then you have a *busy* day.",
+  "You get home *tired*.",
+  "Half the plan",
+  "doesn't *happen*.",
+  "And you decide",
+  "you're just *lazy*.",
+  "But did you leave",
+  "any *room*",
+  "for being *tired*?",
+  "Plan what you can do",
+  "on a *normal* day.",
+  "You can always",
+  "do *more*",
+  "when you have",
+  "the *energy*."
+ ]
+}

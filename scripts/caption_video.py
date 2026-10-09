@@ -42,7 +42,9 @@ def main():
     lines = (render.manual_lines(words, spec["caption_lines"], spec.get("uncensored", False))
              if spec.get("caption_lines") else render.caption_lines(words))
     st = captions.STYLES[style]
-    chunks = edit.chunks_of(lines, st["chunk"], st["chars"])
+    # narrower safe box -> shorter phrases, so they stay on one line
+    chars = int(st["chars"] * min(1.0, spec.get("safe_w", captions.SAFE_W) / captions.SAFE_W))
+    chunks = edit.chunks_of(lines, st["chunk"], chars)
     track = []
     for ci, ch in enumerate(chunks):
         nxt = chunks[ci + 1][0]["s"] if ci + 1 < len(chunks) else total
