@@ -1,0 +1,7 @@
+# media is large: keep it out of git
+sources/*
+frames/*
+clips/*
+transcripts/.work_*/
+!*/.gitkeep
+__pycache__/
