@@ -5,6 +5,12 @@ All three clips come from the sit-down speech he gives to camera inside the car,
 Raw horizontal 1920×1080, H.264 CRF 18 + AAC 192k, original audio only, hard video cuts, 3-frame audio crossfade at each join.
 Cut lists: `notes/specs/tjr_0N.json` (re-render: `python3 scripts/render.py notes/specs/tjr_0N.json`).
 
+**Vertical captioned versions:** `clips/vertical/tjr_0N_<slug>_v.mp4`, 1080×1920
+(`python3 scripts/render.py notes/specs/tjr_0N.json --vertical --captions`).
+- 9:16 crop centred on TJR (face detected at x≈945 px in all three clips, steady ±40 px, so the crop is fixed with no jitter).
+- Captions: one line at a time, white Inter SemiBold 64 px, soft blurred dark shadow, ~70 % down the frame (clear of TikTok/Reels bottom UI). Lines are hand-phrased in each spec (`caption_lines`); the renderer verifies they match the spoken words 1:1 and times them from word timestamps.
+- Swear words are starred in captions only (f*ck, sh*t) for reach; audio is untouched. `--uncensored` prints them in full.
+
 Ranked best → worst.
 
 ---
@@ -33,8 +39,8 @@ Ranked best → worst.
 - **Caption:** Everyone starts somewhere. Not everyone leaves. #TJR #9to5 #money #entrepreneur #daytrading
 - **Flags:** No logos/sponsors. The two sentences are in reverse order from how he said them (he said the "imagine" line ~1 s before); meaning unchanged. One f-word.
 
-## 3. `clips/tjr_03_five-years.mp4`: 20.5 s
-- **Source / timestamps:** tjr_yt1 28:23.6–28:26.2 (cold open) → 27:55.8–27:59.7 → 28:02.5–28:04.3 → 28:05.8–28:14.6 → 28:31.0–28:34.2 (5 segments)
+## 3. `clips/tjr_03_five-years.mp4`: 20.9 s
+- **Source / timestamps:** tjr_yt1 28:23.6–28:26.2 (cold open) → 27:55.8–27:59.7 → 28:02.5–28:04.5 → 28:05.8–28:15.0 → 28:31.0–28:34.2 (5 segments)
 - **Hook (first 2 s):** "Five years, man, I thought this was going to take a year." (Here he's voicing the viewer's reaction.)
 - **Full text:** "Five years, man, I thought this was going to take a year. I was very interested in a hobby called day trading. I was absolutely obsessed with it. I fell on my face over and over and over again, lost a shit ton of money, but then I finally was able to make it work. And from there, it has taken me around five years. The journey is actually the most fun part about it."
 - **Why it should go viral:** An honest timeline in a niche full of "overnight success" claims. Every trader recognizes "lost a ton of money". It's a mini story arc (obsession → failure → it works → 5 years) and invites "how long did it take you?" comments.

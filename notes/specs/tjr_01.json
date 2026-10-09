@@ -1,3 +1,32 @@
-{"out":"clips/tjr_01_winners-lost-more.mp4","segments":[
- {"src":"sources/tjr_yt1.mkv","start":2005.72,"end":2021.30},
- {"src":"sources/tjr_yt1.mkv","start":2026.06,"end":2029.30}]}
+{
+ "out": "clips/tjr_01_winners-lost-more.mp4",
+ "segments": [
+  {
+   "src": "sources/tjr_yt1.mkv",
+   "start": 2005.72,
+   "end": 2021.3
+  },
+  {
+   "src": "sources/tjr_yt1.mkv",
+   "start": 2026.06,
+   "end": 2029.3
+  }
+ ],
+ "center_x": 945,
+ "caption_lines": [
+  "Winners have lost more",
+  "than losers ever have",
+  "in their entire lives",
+  "because winners have",
+  "fallen on their face",
+  "so many times",
+  "to understand",
+  "what it takes",
+  "to be a winner.",
+  "You guys are going to fall,",
+  "it's going to fucking hurt.",
+  "But the only way",
+  "that you truly lose",
+  "is when you quit."
+ ]
+}

@@ -1,6 +1,53 @@
-{"out":"clips/tjr_03_five-years.mp4","segments":[
- {"src":"sources/tjr_yt1.mkv","start":1703.60,"end":1706.14},
- {"src":"sources/tjr_yt1.mkv","start":1675.82,"end":1679.70},
- {"src":"sources/tjr_yt1.mkv","start":1682.50,"end":1684.32},
- {"src":"sources/tjr_yt1.mkv","start":1685.88,"end":1694.64},
- {"src":"sources/tjr_yt1.mkv","start":1711.02,"end":1714.12}]}
+{
+ "out": "clips/tjr_03_five-years.mp4",
+ "segments": [
+  {
+   "src": "sources/tjr_yt1.mkv",
+   "start": 1703.6,
+   "end": 1706.14
+  },
+  {
+   "src": "sources/tjr_yt1.mkv",
+   "start": 1675.82,
+   "end": 1679.7
+  },
+  {
+   "src": "sources/tjr_yt1.mkv",
+   "start": 1682.5,
+   "end": 1684.48
+  },
+  {
+   "src": "sources/tjr_yt1.mkv",
+   "start": 1685.88,
+   "end": 1694.9
+  },
+  {
+   "src": "sources/tjr_yt1.mkv",
+   "start": 1711.02,
+   "end": 1714.12
+  }
+ ],
+ "center_x": 945,
+ "caption_lines": [
+  "Five years, man,",
+  "I thought this was going",
+  "to take a year.",
+  "I was very interested",
+  "in a hobby called",
+  "day trading.",
+  "I was absolutely",
+  "obsessed with it.",
+  "I fell on my face",
+  "over and over",
+  "and over again,",
+  "lost a shit ton of money,",
+  "but then I finally",
+  "was able to make it work.",
+  "And from there,",
+  "it has taken me",
+  "around five years.",
+  "The journey is",
+  "actually the most",
+  "fun part about it."
+ ]
+}

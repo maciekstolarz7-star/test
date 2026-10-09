@@ -1,3 +1,36 @@
-{"out":"clips/tjr_02_boss-you-hate.mp4","segments":[
- {"src":"sources/tjr_yt1.mkv","start":1733.64,"end":1744.80},
- {"src":"sources/tjr_yt1.mkv","start":1729.08,"end":1732.84}]}
+{
+ "out": "clips/tjr_02_boss-you-hate.mp4",
+ "segments": [
+  {
+   "src": "sources/tjr_yt1.mkv",
+   "start": 1733.64,
+   "end": 1744.8
+  },
+  {
+   "src": "sources/tjr_yt1.mkv",
+   "start": 1729.08,
+   "end": 1732.84
+  }
+ ],
+ "center_x": 945,
+ "caption_lines": [
+  "There's a small",
+  "portion of time",
+  "where you're going",
+  "to have to work",
+  "for a boss",
+  "that you absolutely hate.",
+  "But once you can",
+  "break out of that",
+  "and pursue something",
+  "that you love,",
+  "find a way to monetize it.",
+  "That's when your life",
+  "is going to change.",
+  "Imagine just waking up",
+  "and saying, hey,",
+  "I get to do",
+  "whatever the fuck",
+  "I want to do today."
+ ]
+}
