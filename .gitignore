@@ -7,3 +7,4 @@ transcripts/.work_*/
 __pycache__/
 notes/.transcribe.log
 broll/*
+side/*

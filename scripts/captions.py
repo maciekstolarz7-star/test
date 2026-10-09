@@ -71,22 +71,27 @@ def _layout(parts, gap):
     return x - gap, xs, ws
 
 
-def draw(img, words, active, style, age=1.0, keywords=()):
+def draw(img, words, active, style, age=1.0, keywords=(), y=None, safe_w=None):
     img = img.copy()
     st = STYLES[style]
     s = _pop(age)
-    cy = int(H * st["y"])
+    cy = int(H * (st["y"] if y is None else y))
+    sw = safe_w or SAFE_W
     kw = {k.lower() for k in keywords}
     bare = lambda t: "".join(c for c in t.lower() if c.isalnum() or c == "'")
+    # a word written as *word* in the caption lines is a keyword too
+    marked = {i for i, w in enumerate(words) if w.startswith("*") and w.rstrip(",.?!").endswith("*")}
+    words = [w.replace("*", "") if i in marked else w for i, w in enumerate(words)]
+    is_kw = lambda i: i in marked or bare(words[i]) in kw
 
     if style == "boxed":
         f = font("Poppins-ExtraBold.ttf", int(78 * s))
         parts = [(w.upper(), f) for w in words]
         tw, xs, ws = _layout(parts, int(20 * s))
-        if tw > SAFE_W:
-            f = font("Poppins-ExtraBold.ttf", int(78 * s * SAFE_W / tw))
+        if tw > sw:
+            f = font("Poppins-ExtraBold.ttf", int(78 * s * sw / tw))
             parts = [(w.upper(), f) for w in words]
-            tw, xs, ws = _layout(parts, int(20 * s * SAFE_W / tw))
+            tw, xs, ws = _layout(parts, int(20 * s * sw / tw))
         x0 = (W - tw) // 2
         asc = f.getbbox("H")
         d = ImageDraw.Draw(img)
@@ -100,9 +105,9 @@ def draw(img, words, active, style, age=1.0, keywords=()):
     if style == "single":
         t = words[active].upper()
         f = font("Anton-Regular.ttf", int(150 * s))
-        if f.getbbox(t)[2] - f.getbbox(t)[0] > SAFE_W:
-            f = font("Anton-Regular.ttf", int(150 * s * SAFE_W / (f.getbbox(t)[2] - f.getbbox(t)[0])))
-        col = YELLOW if bare(t) in kw else (255, 255, 255)
+        if f.getbbox(t)[2] - f.getbbox(t)[0] > sw:
+            f = font("Anton-Regular.ttf", int(150 * s * sw / (f.getbbox(t)[2] - f.getbbox(t)[0])))
+        col = YELLOW if is_kw(active) else (255, 255, 255)
         bb = f.getbbox(t)
         x = (W - (bb[2] - bb[0])) // 2 - bb[0]
         _shadow(img, lambda d, v: d.text((x, cy), t, font=f, fill=v, stroke_width=10, stroke_fill=v),
@@ -113,9 +118,9 @@ def draw(img, words, active, style, age=1.0, keywords=()):
     if style == "podcast":
         def build(ws, k):
             parts = []
-            for w in ws:
+            for i, w in ws:
                 t = w.lower().strip(",.")
-                if bare(w) in kw:
+                if is_kw(i):
                     parts.append((t, font("PlayfairDisplay-Italic[wght].ttf", int(96 * k), 600)))
                 else:
                     parts.append((t, font("Montserrat[wght].ttf", int(64 * k), 700)))
@@ -123,17 +128,18 @@ def draw(img, words, active, style, age=1.0, keywords=()):
 
         def fit(ws):
             parts, (tw, xs, _) = build(ws, s)
-            if tw > SAFE_W:
-                parts, (tw, xs, _) = build(ws, s * SAFE_W / tw)
+            if tw > sw:
+                parts, (tw, xs, _) = build(ws, s * sw / tw)
             return parts, tw, xs
 
-        _, (tw, _, _) = build(words, s)
-        if tw <= SAFE_W / MIN_FIT or len(words) < 2:
-            rows = [(words, 0)]
+        iw = list(enumerate(words))
+        _, (tw, _, _) = build(iw, s)
+        if tw <= sw / MIN_FIT or len(words) < 2:
+            rows = [(iw, 0)]
         else:  # two balanced lines
             cut = min(range(1, len(words)),
-                      key=lambda k: abs(build(words[:k], s)[1][0] - build(words[k:], s)[1][0]))
-            rows = [(words[:cut], 0), (words[cut:], cut)]
+                      key=lambda k: abs(build(iw[:k], s)[1][0] - build(iw[k:], s)[1][0]))
+            rows = [(iw[:cut], 0), (iw[cut:], cut)]
         laid = []
         for r, (ws, first) in enumerate(rows):
             parts, tw, xs = fit(ws)
@@ -151,8 +157,8 @@ def draw(img, words, active, style, age=1.0, keywords=()):
     if style == "native":
         f = font("Poppins-Bold.ttf", int(60 * s))
         t = " ".join(words)
-        if f.getbbox(t)[2] - f.getbbox(t)[0] > SAFE_W - 56:
-            f = font("Poppins-Bold.ttf", int(60 * s * (SAFE_W - 56) / (f.getbbox(t)[2] - f.getbbox(t)[0])))
+        if f.getbbox(t)[2] - f.getbbox(t)[0] > sw - 56:
+            f = font("Poppins-Bold.ttf", int(60 * s * (sw - 56) / (f.getbbox(t)[2] - f.getbbox(t)[0])))
         bb = f.getbbox(t)
         tw, th = bb[2] - bb[0], bb[3] - bb[1]
         x = (W - tw) // 2
