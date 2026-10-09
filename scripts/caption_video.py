@@ -3,7 +3,7 @@
 
 Spec (JSON):
   {"video": "side/side_01.mp4",
-   "transcript": "transcripts/side_01.json",      # word timestamps (transcribe.py format)
+   "transcript": "transcripts/side_01.json",      # word timestamps; made automatically if missing
    "out": "side/side_01_captioned.mp4",
    "style": "podcast",          # see scripts/captions.py
    "y": 0.47,                   # caption height as a fraction of the frame (0.5 = middle)
@@ -29,12 +29,29 @@ import render  # noqa: E402
 ROOT = render.ROOT
 
 
+def transcribe(video, path):
+    """Word-timestamped transcript of a short video (faster-whisper medium)."""
+    from faster_whisper import WhisperModel
+    pcm = subprocess.run(["ffmpeg", "-v", "error", "-i", str(video), "-ac", "1", "-ar", "16000",
+                          "-f", "s16le", "-"], capture_output=True, check=True).stdout
+    audio = np.frombuffer(pcm, np.int16).astype(np.float32) / 32768
+    segs, _ = WhisperModel("medium", device="cpu", compute_type="int8").transcribe(
+        audio, language="en", word_timestamps=True, beam_size=5)
+    out = [{"start": s.start, "end": s.end, "text": s.text.strip(),
+            "words": [{"s": round(w.start, 2), "e": round(w.end, 2), "w": w.word,
+                       "p": round(w.probability, 2)} for w in s.words]} for s in segs]
+    path.write_text(json.dumps({"source": video.name, "segments": out}))
+    print("\n".join(s["text"] for s in out))
+
+
 def main():
     spec = json.loads(Path(sys.argv[1]).read_text())
     video = ROOT / spec["video"]
     w, h, fps = edit.probe(video)
     style = spec.get("style", "podcast")
 
+    if not (ROOT / spec["transcript"]).exists():
+        transcribe(video, ROOT / spec["transcript"])
     tr = json.loads((ROOT / spec["transcript"]).read_text())
     words = [{"s": x["s"], "e": x["e"], "w": x["w"].strip()} for s in tr["segments"] for x in s["words"]]
     total = float(subprocess.run(["ffprobe", "-v", "error", "-show_entries", "format=duration",
