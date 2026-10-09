@@ -5,3 +5,4 @@ clips/*
 transcripts/.work_*/
 !*/.gitkeep
 __pycache__/
+notes/.transcribe.log

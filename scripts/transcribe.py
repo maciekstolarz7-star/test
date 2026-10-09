@@ -9,8 +9,10 @@ Usage: python3 scripts/transcribe.py [--model medium|small] [--chunk 1800] [file
 Output per source: transcripts/<stem>.json (segments + words) and
                    transcripts/<stem>.txt  ([HH:MM:SS] line per segment)
 """
-import argparse, json, subprocess, sys, time
+import argparse, json, subprocess, sys, time, wave
 from pathlib import Path
+
+import numpy as np
 
 ROOT = Path(__file__).resolve().parent.parent
 SRC, OUT = ROOT / "sources", ROOT / "transcripts"
@@ -65,10 +67,13 @@ def main():
                 segs = json.loads(cache.read_text())
             else:
                 t0 = time.time()
-                piece = work / "piece.wav"
-                subprocess.run(["ffmpeg", "-y", "-v", "error", "-ss", str(start), "-t", str(length),
-                                "-i", str(wav), "-c", "copy", str(piece)], check=True)
-                it, _ = model.transcribe(str(piece), language="en", word_timestamps=True,
+                # pass samples directly: faster-whisper's own decoder (PyAV) is
+                # version-sensitive and the wav is already 16 kHz mono
+                with wave.open(str(wav)) as w:
+                    w.setpos(int(start * 16000))
+                    audio = np.frombuffer(w.readframes(int(length * 16000)),
+                                          dtype=np.int16).astype(np.float32) / 32768
+                it, _ = model.transcribe(audio, language="en", word_timestamps=True,
                                          vad_filter=True, beam_size=5,
                                          condition_on_previous_text=False)
                 segs = [{"start": round(s.start + start, 2), "end": round(s.end + start, 2),
