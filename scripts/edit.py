@@ -14,7 +14,6 @@ Spec additions (all optional):
              "cx": 820, "z": 1.0, "z2": 1.08}]
            Cutaway (video only, voice keeps playing) from src at time t,
            9:16 crop centred on source x = cx, slow push from z to z2.
-  "emphasis": ["lost", "quit"]   words highlighted in the captions.
 
 Usage: python3 scripts/edit.py notes/specs/tjr_01.json [--uncensored]
 Output: clips/edited/<name>_edit.mp4 (1080x1920)
@@ -120,7 +119,50 @@ def frame_crop(img, cx, cy, z):
     return cv2.warpAffine(img, m, (OW, OH), flags=cv2.INTER_CUBIC, borderMode=cv2.BORDER_REPLICATE)
 
 
+CHUNK_CHARS = 17        # max characters per caption chunk (uppercase, 76 px)
+
+
+def chunks_of(lines):
+    """Chunk the whole clip's words (DP): chunks of <= 3 words (4 if short) / CHUNK_CHARS,
+    never across a sentence end or a cut, preferring caption-line boundaries,
+    avoiding lone short words and uneven sizes."""
+    words, line_end, hard = [], [], []
+    for ln in lines:
+        for k, w in enumerate(ln):
+            words.append(w)
+            line_end.append(k == len(ln) - 1)
+            hard.append(bool(render.re.search(r"[.?!]$", w["w"])))
+    for i in range(len(words) - 1):  # a cut right after word i is a hard break
+        if words[i + 1].get("cut"):
+            hard[i] = True
+    n = len(words)
+
+    def cost(i, j):  # chunk = words[i:j]
+        ws = words[i:j]
+        ln = len(" ".join(w["w"] for w in ws))
+        if len(ws) > (4 if ln <= 15 else 3) or (ln > CHUNK_CHARS and len(ws) > 1) or any(hard[i:j - 1]):
+            return None
+        c = (ln - 11) ** 2 * 0.3
+        if len(ws) == 1 and len(ws[0]["w"]) <= 5:
+            c += 60
+        if j < n and not line_end[j - 1]:
+            c += 25
+        return c
+
+    best = [(0, [])] + [None] * n
+    for j in range(1, n + 1):
+        for i in range(max(0, j - 4), j):
+            c = cost(i, j)
+            if c is not None and best[i] is not None:
+                cand = (best[i][0] + c, best[i][1] + [(i, j)])
+                if best[j] is None or cand[0] < best[j][0]:
+                    best[j] = cand
+    return [words[i:j] for i, j in best[n][1]]
+
+
 def captions(spec, ass_path, uncensored):
+    """Bold short-form captions: 2-3 words at a time, uppercase, black outline;
+    the word being spoken turns yellow and grows slightly; each chunk pops in."""
     segs = spec["segments"]
     cache = {}
     for s in segs:
@@ -128,21 +170,38 @@ def captions(spec, ass_path, uncensored):
         cache.setdefault(src, render.words_for(src))
         s["_cut"] = render.snap(s["start"], s["end"], cache[src])
     words, total = render.caption_words(segs, cache, uncensored)
-    render.write_ass(ass_path, words, total, OW, OH, spec.get("caption_lines"), uncensored)
-    # emphasis colour + a subtle pop-in on every line
-    emph = {e.lower() for e in spec.get("emphasis", [])}
-    out = []
-    for line in ass_path.read_text().splitlines():
-        if line.startswith("Dialogue:"):
-            head, text = line.split(",,0,0,0,,", 1)
-            text = text.replace("{\\blur3}", "")
-            toks = [f"{{\\c{ACCENT}}}{t}{{\\c&HFFFFFF&}}"
-                    if render.re.sub(r"[^\w']", "", t).lower().replace("*", "") in emph else t
-                    for t in text.split(" ")]
-            line = (head + ",,0,0,0,,{\\blur3\\fscx106\\fscy106\\t(0,90,\\fscx100\\fscy100)}"
-                    + " ".join(toks))
-        out.append(line)
-    ass_path.write_text("\n".join(out) + "\n")
+    lines = (render.manual_lines(words, spec["caption_lines"], uncensored)
+             if spec.get("caption_lines") else render.caption_lines(words))
+    clean = lambda t: render.re.sub(r"[,.;:]+$", "", t).upper()
+    chunks = chunks_of(lines)
+    ev = []
+    for ci, ch in enumerate(chunks):
+        c_start = ch[0]["s"]
+        nxt = chunks[ci + 1][0]["s"] if ci + 1 < len(chunks) else total
+        c_end = min(nxt, ch[-1]["e"] + 0.35)
+        for k, w in enumerate(ch):
+            st = c_start if k == 0 else w["s"]
+            en = ch[k + 1]["s"] if k + 1 < len(ch) else c_end
+            if en - st < 0.02:
+                continue
+            toks = [f"{{\\c{ACCENT}\\fscx106\\fscy106}}{clean(x['w'])}{{\\c&HFFFFFF&\\fscx100\\fscy100}}"
+                    if j == k else clean(x["w"]) for j, x in enumerate(ch)]
+            pop = "{\\fscx82\\fscy82\\t(0,110,\\fscx100\\fscy100)}" if k == 0 else ""
+            ev.append(f"Dialogue: 0,{render.ass_time(st)},{render.ass_time(en)},Cap,,0,0,0,,{pop}{' '.join(toks)}")
+    ass_path.write_text(f"""[Script Info]
+ScriptType: v4.00+
+PlayResX: {OW}
+PlayResY: {OH}
+WrapStyle: 2
+ScaledBorderAndShadow: yes
+
+[V4+ Styles]
+Format: Name, Fontname, Fontsize, PrimaryColour, SecondaryColour, OutlineColour, BackColour, Bold, Italic, Underline, StrikeOut, ScaleX, ScaleY, Spacing, Angle, BorderStyle, Outline, Shadow, Alignment, MarginL, MarginR, MarginV, Encoding
+Style: Cap,Inter Black,76,&H00FFFFFF,&H00FFFFFF,&H00000000,&H90000000,0,0,0,0,100,100,2,0,1,5.5,4,2,40,40,{round(OH * 0.33)},1
+
+[Events]
+Format: Layer, Start, End, Style, Name, MarginL, MarginR, MarginV, Effect, Text
+""" + "\n".join(ev) + "\n")
 
 
 def main():

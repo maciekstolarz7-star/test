@@ -74,12 +74,12 @@ Ranked best → worst.
 ## Edited vertical versions (`clips/edited/*_edit.mp4`)
 
 `python3 scripts/edit.py notes/specs/tjr_0N.json`: built on top of the horizontal render (identical cuts/audio), 1080×1920.
-- **Punch-in zooms** on emphasis lines (1.0 → 1.12–1.35×) with a small overshoot so each one lands; slow drift while held; a slow push-in on every closing line. The crop follows TJR's face (smoothed face tracking), so he stays framed at every zoom level.
+- **Punch-in zooms** (pace matched to clip 02: a change every ~1–1.5 s, quick pull-outs, a hard punch on the final word) on emphasis lines (1.0 → 1.12–1.35×) with a small overshoot so each one lands; slow drift while held; a slow push-in on every closing line. The crop follows TJR's face (smoothed face tracking), so he stays framed at every zoom level.
 - **B-roll cutaways** (video only; his voice keeps playing), all real TJR footage from the same vlog, him driving the convertible under palm trees, no Rolls-Royce badge in frame:
-  - 01: 0:08.4–0:10.0 ("so many times"), vlog 17:30
+  - 01: 0:04.2–0:05.6 ("in their entire lives"), vlog 4:40; 0:08.4–0:10.0 ("so many times"), vlog 17:30
   - 02: 0:11.4–0:14.3 ("Imagine just waking up… I get to do"), vlog 16:05 + 4:30, then back on TJR for "I want to do today"
   - 03: 0:14.2–0:17.7 ("And from there… around five years"), vlog 9:55 + 17:30
   - In the B-roll shots he's talking to the camera, so his lips don't match the voice-over (normal for cutaways).
-- **Captions:** same one-line style + a slight pop-in per line; emphasis words in soft yellow (#FFE14D): 01 *lost more, winner, hurt, quit*; 02 *boss, hate, monetize, today*; 03 *five years, obsessed, money, journey*.
+- **Captions (v3 restyle):** bold short-form style: Inter Black 76 px, UPPERCASE, white with black outline + soft shadow, 1–4 words at a time (chunked across the clip, never across a sentence or a cut, no stranded single words). The word being spoken turns yellow (#FFE14D) and grows slightly; each new chunk pops in.
 - Zoomed shots are upscaled up to ~2.3× from the 1080p source, slightly softer than the wide shots but fine on a phone.
 - Other TJR videos as B-roll: YouTube blocks downloads from this server; upload them to Drive (like the first source) to use them.
